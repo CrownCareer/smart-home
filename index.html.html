@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-House Admin Control</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --off-red: #ef4444;
+            --on-green: #22c55e;
+            --light-on: #facc15;
+            --text-main: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* --- LOGIN SCREEN --- */
+        #login-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 2000;
+        }
+        .login-box {
+            background: var(--card-bg);
+            padding: 30px; border-radius: 12px; text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        input {
+            display: block; width: 220px; padding: 12px;
+            margin: 10px auto; border-radius: 6px;
+            border: 1px solid #334155; background: #0f172a; color: white;
+        }
+
+        /* --- MAIN LAYOUT --- */
+        .container {
+            display: none;
+            padding: 60px 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        #house-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        .house-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.3s;
+            border: 2px solid #334155;
+        }
+        .house-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+        }
+        .house-icon { font-size: 60px; display: block; margin-bottom: 15px; }
+
+        #inside-view {
+            display: none;
+            animation: slideIn 0.4s ease-out;
+        }
+        .back-btn {
+            background: transparent; border: 1px solid var(--accent);
+            color: var(--accent); padding: 10px 20px;
+            border-radius: 5px; cursor: pointer; margin-bottom: 30px;
+        }
+        .room-title { font-size: 2rem; color: var(--accent); margin-bottom: 30px; }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 20px;
+            justify-content: center;
+        }
+
+        /* --- DEVICE CARDS & STATES --- */
+        .card {
+            background: var(--card-bg); padding: 25px;
+            border-radius: 15px; text-align: center;
+            border: 2px solid transparent; transition: 0.3s;
+        }
+        .active { border-color: var(--accent); }
+        
+        .status-indicator {
+            width: 12px; height: 12px; border-radius: 50%;
+            margin: 0 auto 15px; background: var(--off-red);
+        }
+        .active .status-indicator {
+            background: var(--on-green); box-shadow: 0 0 10px var(--on-green);
+        }
+        
+        .device-icon { 
+            font-size: 40px; 
+            display: block; 
+            margin-bottom: 15px; 
+            transition: 0.3s;
+            filter: grayscale(100%);
+            opacity: 0.5;
+        }
+
+        /* Visual Switch Logic */
+        .active .device-icon { 
+            filter: grayscale(0%);
+            opacity: 1;
+        }
+
+        /* Light Specific Glow */
+        .active .light-icon {
+            filter: drop-shadow(0 0 15px var(--light-on));
+            color: var(--light-on);
+        }
+
+        /* Fan Animation */
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .active .fan-icon { display: inline-block; animation: spin 2s linear infinite; }
+
+        .switch-btn {
+            background: var(--accent); color: #0f172a;
+            border: none; padding: 10px; border-radius: 5px;
+            font-weight: bold; cursor: pointer; width: 100%;
+        }
+
+        .logout-btn {
+            position: fixed; top: 20px; right: 20px;
+            background: var(--off-red); color: white;
+            border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;
+        }
+
+        @keyframes slideIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <h2 style="color: var(--accent);">House Owner</h2>
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button class="switch-btn" onclick="checkLogin()">LOGIN</button>
+            <p id="error-msg" style="color: var(--off-red); font-size: 12px; margin-top: 10px;"></p>
+        </div>
+    </div>
+
+    <button id="logout" class="logout-btn" style="display:none;" onclick="location.reload()">Logout</button>
+
+    <div class="container" id="main-ui">
+        
+        <div id="house-selection">
+            <div class="house-card" onclick="enterHouse('eastern')">
+                <span class="house-icon">🏡</span>
+                <h3>Eastern House</h3>
+                <p style="color: #94a3b8;">Enter to Control</p>
+            </div>
+            <div class="house-card" onclick="enterHouse('western')">
+                <span class="house-icon">🏠</span>
+                <h3>Western House</h3>
+                <p style="color: #94a3b8;">Enter to Control</p>
+            </div>
+            <div class="house-card" onclick="enterHouse('service')">
+                <span class="house-icon">🚜</span>
+                <h3>Farm & Kitchen</h3>
+                <p style="color: #94a3b8;">Enter to Control</p>
+            </div>
+        </div>
+
+        <div id="inside-view">
+            <button class="back-btn" onclick="showOutside()">← Back to Houses</button>
+            <div id="room-content"></div>
+        </div>
+
+    </div>
+
+    <script>
+        const houses = {
+            eastern: {
+                title: "Eastern House Controls",
+                devices: [
+                    { id: 'e1', label: 'Light', icon: '💡', class: 'light-icon' },
+                    { id: 'e2', label: 'Fan', icon: '⚙️', class: 'fan-icon' },
+                    { id: 'e3', label: 'TV', icon: '📺', class: '' }
+                ]
+            },
+            western: {
+                title: "Western House Controls",
+                devices: [
+                    { id: 'w1', label: 'Light', icon: '💡', class: 'light-icon' },
+                    { id: 'w2', label: 'Fan', icon: '⚙️', class: 'fan-icon' },
+                    { id: 'w3', label: 'TV', icon: '📺', class: '' }
+                ]
+            },
+            service: {
+                title: "Service Area Controls",
+                devices: [
+                    { id: 'farm', label: 'Cow Farm Light', icon: '🐄', class: 'light-icon' },
+                    { id: 'kitchen', label: 'Kitchen Light', icon: '🍳', class: 'light-icon' }
+                ]
+            }
+        };
+
+        function checkLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            if(u === "admin" && p === "12345") {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('main-ui').style.display = 'block';
+                document.getElementById('logout').style.display = 'block';
+            } else {
+                document.getElementById('error-msg').innerText = "Access Denied!";
+            }
+        }
+
+        function enterHouse(houseKey) {
+            const house = houses[houseKey];
+            const content = document.getElementById('room-content');
+            
+            let html = `<h2 class="room-title">${house.title}</h2>`;
+            html += `<div class="controls-grid">`;
+            
+            house.devices.forEach(dev => {
+                html += `
+                    <div class="card" id="${dev.id}">
+                        <div class="status-indicator"></div>
+                        <span class="device-icon ${dev.class || ''}">${dev.icon}</span>
+                        <p>${dev.label}</p>
+                        <button class="switch-btn" onclick="toggle('${dev.id}')">SWITCH</button>
+                    </div>`;
+            });
+            
+            html += `</div>`;
+            content.innerHTML = html;
+
+            document.getElementById('house-selection').style.display = 'none';
+            document.getElementById('inside-view').style.display = 'block';
+        }
+
+        function showOutside() {
+            document.getElementById('inside-view').style.display = 'none';
+            document.getElementById('house-selection').style.display = 'grid';
+        }
+
+        function toggle(id) {
+            document.getElementById(id).classList.toggle('active');
+        }
+    </script>
+</body>
+</html>
